@@ -22,13 +22,11 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) {
-    	
-    	System.out.println("APP STARTED");
+
+        System.out.println("APP STARTED");
         DBUtil.initDatabase();
 
-        // rest of code...
-
-        // ===== Shop Header =====
+        /* ================= SHOP HEADER ================= */
         Label shopName = new Label("ABC MOBILE SHOP");
         shopName.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         Label shopAddress = new Label("Main Road, Hyderabad | Phone: 9XXXXXXXXX");
@@ -36,12 +34,22 @@ public class MainApp extends Application {
         Label invoiceNo = new Label("Invoice No: 1001");
         Label date = new Label("Date: " + LocalDate.now());
 
-        // ===== Customer Details =====
+        /* ================= CUSTOMER DETAILS ================= */
         TextField customerNameField = new TextField();
         customerNameField.setPromptText("Customer Name");
+        // Customer Name: letters and space only
+        customerNameField.setTextFormatter(new TextFormatter<>(change ->
+                change.getControlNewText().matches("[a-zA-Z ]*") ? change : null
+        ));
+
 
         TextField mobileField = new TextField();
         mobileField.setPromptText("Mobile Number");
+
+        // Mobile → digits only while typing
+        mobileField.setTextFormatter(new TextFormatter<>(c ->
+                c.getControlNewText().matches("\\d*") ? c : null
+        ));
 
         GridPane customerGrid = new GridPane();
         customerGrid.setHgap(10);
@@ -51,34 +59,31 @@ public class MainApp extends Application {
         customerGrid.add(new Label("Mobile:"), 0, 1);
         customerGrid.add(mobileField, 1, 1);
 
-        // ===== Item Entry =====
+        /* ================= ITEM ENTRY ================= */
         TextField itemNameField = new TextField();
         itemNameField.setPromptText("Item Name");
 
         TextField qtyField = new TextField();
         qtyField.setPromptText("Qty");
-
-        // 🔒 Quantity → ONLY integers
-        qtyField.setTextFormatter(new TextFormatter<>(change ->
-                change.getControlNewText().matches("\\d*") ? change : null
+        qtyField.setTextFormatter(new TextFormatter<>(c ->
+                c.getControlNewText().matches("\\d*") ? c : null
         ));
 
         TextField priceField = new TextField();
         priceField.setPromptText("Price");
-
-        // 🔒 Price → integer or decimal
-        priceField.setTextFormatter(new TextFormatter<>(change ->
-                change.getControlNewText().matches("\\d*(\\.\\d*)?") ? change : null
+        priceField.setTextFormatter(new TextFormatter<>(c ->
+                c.getControlNewText().matches("\\d*(\\.\\d*)?") ? c : null
         ));
 
         Button addItemBtn = new Button("Add Item");
         Button deleteItemBtn = new Button("Delete Selected");
+        Button saveBillBtn = new Button("Save Bill");
 
         HBox itemEntryBox = new HBox(10,
                 itemNameField, qtyField, priceField, addItemBtn, deleteItemBtn
         );
 
-        // ===== Table =====
+        /* ================= TABLE ================= */
         TableView<Item> table = new TableView<>(items);
         table.setPrefHeight(250);
 
@@ -100,13 +105,13 @@ public class MainApp extends Application {
 
         table.getColumns().addAll(nameCol, qtyCol, priceCol, amountCol);
 
-        // ===== ADD ITEM LOGIC =====
+        /* ================= ADD ITEM LOGIC ================= */
         addItemBtn.setOnAction(e -> {
+
             String name = itemNameField.getText().trim();
             String qtyText = qtyField.getText().trim();
             String priceText = priceField.getText().trim();
 
-            // 🔒 Item name validation
             if (!name.matches("[a-zA-Z0-9 _\\-/]+")) {
                 showAlert("Item name can contain letters, numbers, space, -, _, / only.");
                 return;
@@ -136,21 +141,54 @@ public class MainApp extends Application {
             priceField.clear();
         });
 
-        // ===== DELETE ITEM LOGIC =====
+        /* ================= DELETE ITEM ================= */
         deleteItemBtn.setOnAction(e -> {
-            Item selectedItem = table.getSelectionModel().getSelectedItem();
-
-            if (selectedItem == null) {
+            Item selected = table.getSelectionModel().getSelectedItem();
+            if (selected == null) {
                 showAlert("Please select an item to delete.");
                 return;
             }
-
-            items.remove(selectedItem);
-            grandTotal -= selectedItem.getAmount();
+            items.remove(selected);
+            grandTotal -= selected.getAmount();
             updateTotalLabel();
         });
 
-        // ===== Layout =====
+        /* ================= SAVE BILL ================= */
+        saveBillBtn.setOnAction(e -> {
+
+            String customerName = customerNameField.getText().trim();
+            String mobile = mobileField.getText().trim();
+
+            if (!customerName.matches("[a-zA-Z ]+")) {
+                showAlert("Customer name must contain only letters.");
+                return;
+            }
+
+            if (!mobile.matches("\\d{10}")) {
+                showAlert("Mobile number must be exactly 10 digits.");
+                return;
+            }
+
+            if (items.isEmpty()) {
+                showAlert("Add at least one item.");
+                return;
+            }
+
+            DBUtil.saveBill(
+                    LocalDate.now().toString(),
+                    customerName,
+                    mobile,
+                    grandTotal
+            );
+
+            showInfo("Bill saved successfully!");
+
+            items.clear();
+            grandTotal = 0;
+            updateTotalLabel();
+        });
+
+        /* ================= LAYOUT ================= */
         VBox root = new VBox(15);
         root.setPadding(new Insets(20));
         root.getChildren().addAll(
@@ -162,7 +200,8 @@ public class MainApp extends Application {
                 new Label("Add Item"),
                 itemEntryBox,
                 table,
-                totalLabel
+                totalLabel,
+                saveBillBtn
         );
 
         stage.setScene(new Scene(root, 900, 650));
@@ -170,17 +209,23 @@ public class MainApp extends Application {
         stage.show();
     }
 
-    // ===== Helper Methods =====
+    /* ================= HELPERS ================= */
     private void updateTotalLabel() {
         totalLabel.setText("Grand Total: " + String.format("%.2f", grandTotal));
     }
 
-    private void showAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Validation Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showAlert(String msg) {
+        Alert a = new Alert(Alert.AlertType.ERROR);
+        a.setTitle("Error");
+        a.setContentText(msg);
+        a.showAndWait();
+    }
+
+    private void showInfo(String msg) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle("Success");
+        a.setContentText(msg);
+        a.showAndWait();
     }
 
     public static void main(String[] args) {
