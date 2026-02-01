@@ -22,6 +22,11 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) {
+    	
+    	System.out.println("APP STARTED");
+        DBUtil.initDatabase();
+
+        // rest of code...
 
         // ===== Shop Header =====
         Label shopName = new Label("ABC MOBILE SHOP");
