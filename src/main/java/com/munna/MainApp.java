@@ -26,7 +26,6 @@ public class MainApp extends Application {
         // ===== Shop Header =====
         Label shopName = new Label("ABC MOBILE SHOP");
         shopName.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
-
         Label shopAddress = new Label("Main Road, Hyderabad | Phone: 9XXXXXXXXX");
 
         Label invoiceNo = new Label("Invoice No: 1001");
@@ -54,17 +53,28 @@ public class MainApp extends Application {
         TextField qtyField = new TextField();
         qtyField.setPromptText("Qty");
 
+        // 🔒 Quantity → ONLY integers
+        qtyField.setTextFormatter(new TextFormatter<>(change ->
+                change.getControlNewText().matches("\\d*") ? change : null
+        ));
+
         TextField priceField = new TextField();
         priceField.setPromptText("Price");
+
+        // 🔒 Price → integer or decimal
+        priceField.setTextFormatter(new TextFormatter<>(change ->
+                change.getControlNewText().matches("\\d*(\\.\\d*)?") ? change : null
+        ));
 
         Button addItemBtn = new Button("Add Item");
         Button deleteItemBtn = new Button("Delete Selected");
 
-        HBox itemEntryBox = new HBox(10, itemNameField, qtyField, priceField, addItemBtn, deleteItemBtn);
+        HBox itemEntryBox = new HBox(10,
+                itemNameField, qtyField, priceField, addItemBtn, deleteItemBtn
+        );
 
         // ===== Table =====
-        TableView<Item> table = new TableView<>();
-        table.setItems(items);
+        TableView<Item> table = new TableView<>(items);
         table.setPrefHeight(250);
 
         TableColumn<Item, String> nameCol = new TableColumn<>("Item Name");
@@ -91,21 +101,19 @@ public class MainApp extends Application {
             String qtyText = qtyField.getText().trim();
             String priceText = priceField.getText().trim();
 
-            if (name.isEmpty()) {
-                showAlert("Item name is required.");
+            // 🔒 Item name validation
+            if (!name.matches("[a-zA-Z0-9 _\\-/]+")) {
+                showAlert("Item name can contain letters, numbers, space, -, _, / only.");
                 return;
             }
 
-            int qty;
-            double price;
-
-            try {
-                qty = Integer.parseInt(qtyText);
-                price = Double.parseDouble(priceText);
-            } catch (NumberFormatException ex) {
-                showAlert("Quantity and Price must be numbers.");
+            if (qtyText.isEmpty() || priceText.isEmpty()) {
+                showAlert("Quantity and Price are required.");
                 return;
             }
+
+            int qty = Integer.parseInt(qtyText);
+            double price = Double.parseDouble(priceText);
 
             if (qty <= 0 || price <= 0) {
                 showAlert("Quantity and Price must be greater than zero.");
@@ -152,9 +160,8 @@ public class MainApp extends Application {
                 totalLabel
         );
 
-        Scene scene = new Scene(root, 900, 650);
+        stage.setScene(new Scene(root, 900, 650));
         stage.setTitle("Offline Billing System");
-        stage.setScene(scene);
         stage.show();
     }
 
