@@ -26,12 +26,13 @@ public class MainApp extends Application {
         // ===== Shop Header =====
         Label shopName = new Label("ABC MOBILE SHOP");
         shopName.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+
         Label shopAddress = new Label("Main Road, Hyderabad | Phone: 9XXXXXXXXX");
 
         Label invoiceNo = new Label("Invoice No: 1001");
         Label date = new Label("Date: " + LocalDate.now());
 
-        // ===== Customer Fields =====
+        // ===== Customer Details =====
         TextField customerNameField = new TextField();
         customerNameField.setPromptText("Customer Name");
 
@@ -46,7 +47,7 @@ public class MainApp extends Application {
         customerGrid.add(new Label("Mobile:"), 0, 1);
         customerGrid.add(mobileField, 1, 1);
 
-        // ===== Item Entry Fields =====
+        // ===== Item Entry =====
         TextField itemNameField = new TextField();
         itemNameField.setPromptText("Item Name");
 
@@ -57,10 +58,11 @@ public class MainApp extends Application {
         priceField.setPromptText("Price");
 
         Button addItemBtn = new Button("Add Item");
+        Button deleteItemBtn = new Button("Delete Selected");
 
-        HBox itemEntryBox = new HBox(10, itemNameField, qtyField, priceField, addItemBtn);
+        HBox itemEntryBox = new HBox(10, itemNameField, qtyField, priceField, addItemBtn, deleteItemBtn);
 
-        // ===== Items Table =====
+        // ===== Table =====
         TableView<Item> table = new TableView<>();
         table.setItems(items);
         table.setPrefHeight(250);
@@ -83,33 +85,59 @@ public class MainApp extends Application {
 
         table.getColumns().addAll(nameCol, qtyCol, priceCol, amountCol);
 
-        // ===== Add Item Logic =====
+        // ===== ADD ITEM LOGIC =====
         addItemBtn.setOnAction(e -> {
-            try {
-                String name = itemNameField.getText();
-                int qty = Integer.parseInt(qtyField.getText());
-                double price = Double.parseDouble(priceField.getText());
+            String name = itemNameField.getText().trim();
+            String qtyText = qtyField.getText().trim();
+            String priceText = priceField.getText().trim();
 
-                if (name.isEmpty() || qty <= 0 || price <= 0) {
-                    return;
-                }
-
-                Item item = new Item(name, qty, price);
-                items.add(item);
-
-                grandTotal += item.getAmount();
-                totalLabel.setText("Grand Total: " + grandTotal);
-
-                itemNameField.clear();
-                qtyField.clear();
-                priceField.clear();
-
-            } catch (Exception ex) {
-                // ignore for now (we’ll add validation later)
+            if (name.isEmpty()) {
+                showAlert("Item name is required.");
+                return;
             }
+
+            int qty;
+            double price;
+
+            try {
+                qty = Integer.parseInt(qtyText);
+                price = Double.parseDouble(priceText);
+            } catch (NumberFormatException ex) {
+                showAlert("Quantity and Price must be numbers.");
+                return;
+            }
+
+            if (qty <= 0 || price <= 0) {
+                showAlert("Quantity and Price must be greater than zero.");
+                return;
+            }
+
+            Item item = new Item(name, qty, price);
+            items.add(item);
+
+            grandTotal += item.getAmount();
+            updateTotalLabel();
+
+            itemNameField.clear();
+            qtyField.clear();
+            priceField.clear();
         });
 
-        // ===== Main Layout =====
+        // ===== DELETE ITEM LOGIC =====
+        deleteItemBtn.setOnAction(e -> {
+            Item selectedItem = table.getSelectionModel().getSelectedItem();
+
+            if (selectedItem == null) {
+                showAlert("Please select an item to delete.");
+                return;
+            }
+
+            items.remove(selectedItem);
+            grandTotal -= selectedItem.getAmount();
+            updateTotalLabel();
+        });
+
+        // ===== Layout =====
         VBox root = new VBox(15);
         root.setPadding(new Insets(20));
         root.getChildren().addAll(
@@ -128,6 +156,19 @@ public class MainApp extends Application {
         stage.setTitle("Offline Billing System");
         stage.setScene(scene);
         stage.show();
+    }
+
+    // ===== Helper Methods =====
+    private void updateTotalLabel() {
+        totalLabel.setText("Grand Total: " + String.format("%.2f", grandTotal));
+    }
+
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Validation Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     public static void main(String[] args) {
