@@ -174,12 +174,20 @@ public class MainApp extends Application {
                 return;
             }
 
-            DBUtil.saveBill(
+            int billId = DBUtil.saveBill(
                     LocalDate.now().toString(),
                     customerName,
                     mobile,
                     grandTotal
             );
+
+            if (billId == -1) {
+                showAlert("Failed to save bill.");
+                return;
+            }
+
+            DBUtil.saveBillItems(billId, items);
+
 
             showInfo("Bill saved successfully!");
 
