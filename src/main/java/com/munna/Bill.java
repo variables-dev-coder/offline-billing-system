@@ -1,7 +1,6 @@
 package com.munna;
 
 public class Bill {
-
     private int billId;
     private String date;
     private String customerName;
@@ -16,23 +15,9 @@ public class Bill {
         this.total = total;
     }
 
-    public int getBillId() {
-        return billId;
-    }
-
-    public String getDate() {
-        return date;
-    }
-
-    public String getCustomerName() {
-        return customerName;
-    }
-
-    public String getMobile() {
-        return mobile;
-    }
-
-    public double getTotal() {
-        return total;
-    }
+    public int getBillId() { return billId; }
+    public String getDate() { return date; }
+    public String getCustomerName() { return customerName; }
+    public String getMobile() { return mobile; }
+    public double getTotal() { return total; }
 }

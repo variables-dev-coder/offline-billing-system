@@ -1,7 +1,6 @@
 package com.munna;
 
 public class Item {
-
     private String name;
     private int quantity;
     private double price;
@@ -14,19 +13,8 @@ public class Item {
         this.amount = quantity * price;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
+    public String getName() { return name; }
+    public int getQuantity() { return quantity; }
+    public double getPrice() { return price; }
+    public double getAmount() { return amount; }
 }

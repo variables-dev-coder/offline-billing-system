@@ -20,220 +20,199 @@ public class MainApp extends Application {
     private double grandTotal = 0.0;
     private Label totalLabel = new Label("Grand Total: 0.00");
 
+    private TableView<Bill> billTable = new TableView<>();
+    private TableView<Item> billItemTable = new TableView<>();
+
     @Override
     public void start(Stage stage) {
 
-        System.out.println("APP STARTED");
         DBUtil.initDatabase();
 
-        /* ================= SHOP HEADER ================= */
         Label shopName = new Label("ABC MOBILE SHOP");
         shopName.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
-        Label shopAddress = new Label("Main Road, Hyderabad | Phone: 9XXXXXXXXX");
-
-        Label invoiceNo = new Label("Invoice No: 1001");
+        Label shopAddress = new Label("Main Road, Hyderabad");
         Label date = new Label("Date: " + LocalDate.now());
 
-        /* ================= CUSTOMER DETAILS ================= */
+        /* ===== CUSTOMER ===== */
         TextField customerNameField = new TextField();
         customerNameField.setPromptText("Customer Name");
-        // Customer Name: letters and space only
-        customerNameField.setTextFormatter(new TextFormatter<>(change ->
-                change.getControlNewText().matches("[a-zA-Z ]*") ? change : null
-        ));
-
+        customerNameField.setTextFormatter(
+                new TextFormatter<>(c ->
+                        c.getControlNewText().matches("[a-zA-Z ]*") ? c : null)
+        );
 
         TextField mobileField = new TextField();
-        mobileField.setPromptText("Mobile Number");
-
-        // Mobile → digits only while typing
-        mobileField.setTextFormatter(new TextFormatter<>(c ->
-                c.getControlNewText().matches("\\d*") ? c : null
-        ));
+        mobileField.setPromptText("Mobile");
+        mobileField.setTextFormatter(
+                new TextFormatter<>(c ->
+                        c.getControlNewText().matches("\\d*") ? c : null)
+        );
 
         GridPane customerGrid = new GridPane();
         customerGrid.setHgap(10);
         customerGrid.setVgap(10);
-        customerGrid.add(new Label("Customer Name:"), 0, 0);
+        customerGrid.add(new Label("Customer:"), 0, 0);
         customerGrid.add(customerNameField, 1, 0);
         customerGrid.add(new Label("Mobile:"), 0, 1);
         customerGrid.add(mobileField, 1, 1);
 
-        /* ================= ITEM ENTRY ================= */
+        /* ===== ITEM ENTRY ===== */
         TextField itemNameField = new TextField();
-        itemNameField.setPromptText("Item Name");
+        itemNameField.setPromptText("Item");
 
         TextField qtyField = new TextField();
         qtyField.setPromptText("Qty");
         qtyField.setTextFormatter(new TextFormatter<>(c ->
-                c.getControlNewText().matches("\\d*") ? c : null
-        ));
+                c.getControlNewText().matches("\\d*") ? c : null));
 
         TextField priceField = new TextField();
         priceField.setPromptText("Price");
         priceField.setTextFormatter(new TextFormatter<>(c ->
-                c.getControlNewText().matches("\\d*(\\.\\d*)?") ? c : null
-        ));
+                c.getControlNewText().matches("\\d*(\\.\\d*)?") ? c : null));
 
         Button addItemBtn = new Button("Add Item");
-        Button deleteItemBtn = new Button("Delete Selected");
+        Button deleteItemBtn = new Button("Delete");
         Button saveBillBtn = new Button("Save Bill");
+        Button pdfBtn = new Button("Generate PDF");
 
-        HBox itemEntryBox = new HBox(10,
-                itemNameField, qtyField, priceField, addItemBtn, deleteItemBtn
-        );
+        HBox itemBox = new HBox(10, itemNameField, qtyField, priceField, addItemBtn, deleteItemBtn);
 
-        /* ================= TABLE ================= */
-        TableView<Item> table = new TableView<>(items);
-        table.setPrefHeight(250);
+        /* ===== CURRENT ITEMS TABLE ===== */
+        TableView<Item> itemTable = new TableView<>(items);
 
-        TableColumn<Item, String> nameCol = new TableColumn<>("Item Name");
-        nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
-        nameCol.setPrefWidth(250);
+        TableColumn<Item, String> iName = new TableColumn<>("Item");
+        iName.setCellValueFactory(new PropertyValueFactory<>("name"));
 
-        TableColumn<Item, Integer> qtyCol = new TableColumn<>("Qty");
-        qtyCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-        qtyCol.setPrefWidth(80);
+        TableColumn<Item, Integer> iQty = new TableColumn<>("Qty");
+        iQty.setCellValueFactory(new PropertyValueFactory<>("quantity"));
 
-        TableColumn<Item, Double> priceCol = new TableColumn<>("Price");
-        priceCol.setCellValueFactory(new PropertyValueFactory<>("price"));
-        priceCol.setPrefWidth(120);
+        TableColumn<Item, Double> iPrice = new TableColumn<>("Price");
+        iPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
 
-        TableColumn<Item, Double> amountCol = new TableColumn<>("Amount");
-        amountCol.setCellValueFactory(new PropertyValueFactory<>("amount"));
-        amountCol.setPrefWidth(120);
+        TableColumn<Item, Double> iAmt = new TableColumn<>("Amount");
+        iAmt.setCellValueFactory(new PropertyValueFactory<>("amount"));
 
-        table.getColumns().addAll(nameCol, qtyCol, priceCol, amountCol);
+        itemTable.getColumns().setAll(iName, iQty, iPrice, iAmt);
+        itemTable.setPrefHeight(200);
 
-        /* ================= ADD ITEM LOGIC ================= */
         addItemBtn.setOnAction(e -> {
-
-            String name = itemNameField.getText().trim();
-            String qtyText = qtyField.getText().trim();
-            String priceText = priceField.getText().trim();
-
-            if (!name.matches("[a-zA-Z0-9 _\\-/]+")) {
-                showAlert("Item name can contain letters, numbers, space, -, _, / only.");
+            if (itemNameField.getText().isEmpty()
+                    || qtyField.getText().isEmpty()
+                    || priceField.getText().isEmpty()) {
+                alert("Fill all item fields");
                 return;
             }
 
-            if (qtyText.isEmpty() || priceText.isEmpty()) {
-                showAlert("Quantity and Price are required.");
-                return;
-            }
+            Item item = new Item(
+                    itemNameField.getText(),
+                    Integer.parseInt(qtyField.getText()),
+                    Double.parseDouble(priceField.getText())
+            );
 
-            int qty = Integer.parseInt(qtyText);
-            double price = Double.parseDouble(priceText);
-
-            if (qty <= 0 || price <= 0) {
-                showAlert("Quantity and Price must be greater than zero.");
-                return;
-            }
-
-            Item item = new Item(name, qty, price);
             items.add(item);
-
             grandTotal += item.getAmount();
-            updateTotalLabel();
+            updateTotal();
 
             itemNameField.clear();
             qtyField.clear();
             priceField.clear();
         });
 
-        /* ================= DELETE ITEM ================= */
         deleteItemBtn.setOnAction(e -> {
-            Item selected = table.getSelectionModel().getSelectedItem();
-            if (selected == null) {
-                showAlert("Please select an item to delete.");
-                return;
+            Item selected = itemTable.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                items.remove(selected);
+                grandTotal -= selected.getAmount();
+                updateTotal();
             }
-            items.remove(selected);
-            grandTotal -= selected.getAmount();
-            updateTotalLabel();
         });
 
-        /* ================= SAVE BILL ================= */
         saveBillBtn.setOnAction(e -> {
-
-            String customerName = customerNameField.getText().trim();
-            String mobile = mobileField.getText().trim();
-
-            if (!customerName.matches("[a-zA-Z ]+")) {
-                showAlert("Customer name must contain only letters.");
-                return;
-            }
-
-            if (!mobile.matches("\\d{10}")) {
-                showAlert("Mobile number must be exactly 10 digits.");
-                return;
-            }
-
-            if (items.isEmpty()) {
-                showAlert("Add at least one item.");
-                return;
-            }
-
             int billId = DBUtil.saveBill(
                     LocalDate.now().toString(),
-                    customerName,
-                    mobile,
+                    customerNameField.getText(),
+                    mobileField.getText(),
                     grandTotal
             );
-
-            if (billId == -1) {
-                showAlert("Failed to save bill.");
-                return;
-            }
-
             DBUtil.saveBillItems(billId, items);
-
-
-            showInfo("Bill saved successfully!");
-
+            billTable.setItems(DBUtil.getAllBills());
+            info("Bill saved");
             items.clear();
             grandTotal = 0;
-            updateTotalLabel();
+            updateTotal();
         });
 
-        /* ================= LAYOUT ================= */
-        VBox root = new VBox(15);
-        root.setPadding(new Insets(20));
-        root.getChildren().addAll(
-                shopName,
-                shopAddress,
-                invoiceNo,
-                date,
-                customerGrid,
-                new Label("Add Item"),
-                itemEntryBox,
-                table,
-                totalLabel,
-                saveBillBtn
-        );
+        pdfBtn.setOnAction(e -> {
+            PDFUtil.generateSamplePDF();
+            info("PDF generated");
+        });
 
-        stage.setScene(new Scene(root, 900, 650));
+        /* ===== BILL HISTORY ===== */
+        TableColumn<Bill, Integer> bId = new TableColumn<>("ID");
+        bId.setCellValueFactory(new PropertyValueFactory<>("billId"));
+
+        TableColumn<Bill, String> bDate = new TableColumn<>("Date");
+        bDate.setCellValueFactory(new PropertyValueFactory<>("date"));
+
+        TableColumn<Bill, String> bCust = new TableColumn<>("Customer");
+        bCust.setCellValueFactory(new PropertyValueFactory<>("customerName"));
+
+        TableColumn<Bill, Double> bTotal = new TableColumn<>("Total");
+        bTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
+
+        billTable.getColumns().setAll(bId, bDate, bCust, bTotal);
+        billTable.setItems(DBUtil.getAllBills());
+
+        billTable.getSelectionModel().selectedItemProperty().addListener((a, b, c) -> {
+            if (c != null) {
+                billItemTable.setItems(DBUtil.getItemsByBillId(c.getBillId()));
+            }
+        });
+
+        TableColumn<Item, String> biName = new TableColumn<>("Item");
+        biName.setCellValueFactory(new PropertyValueFactory<>("name"));
+
+        TableColumn<Item, Integer> biQty = new TableColumn<>("Qty");
+        biQty.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+
+        TableColumn<Item, Double> biAmt = new TableColumn<>("Amount");
+        biAmt.setCellValueFactory(new PropertyValueFactory<>("amount"));
+
+        billItemTable.getColumns().setAll(biName, biQty, biAmt);
+
+        VBox content = new VBox(15,
+                shopName, shopAddress, date,
+                customerGrid,
+                itemBox,
+                itemTable,
+                totalLabel,
+                saveBillBtn,
+                pdfBtn,
+                new Label("Bills"),
+                billTable,
+                new Label("Bill Items"),
+                billItemTable
+        );
+        content.setPadding(new Insets(20));
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+
+        stage.setScene(new Scene(scroll, 900, 700));
         stage.setTitle("Offline Billing System");
         stage.show();
     }
 
-    /* ================= HELPERS ================= */
-    private void updateTotalLabel() {
+    private void updateTotal() {
         totalLabel.setText("Grand Total: " + String.format("%.2f", grandTotal));
     }
 
-    private void showAlert(String msg) {
-        Alert a = new Alert(Alert.AlertType.ERROR);
-        a.setTitle("Error");
-        a.setContentText(msg);
-        a.showAndWait();
+    private void alert(String m) {
+        new Alert(Alert.AlertType.ERROR, m).showAndWait();
     }
 
-    private void showInfo(String msg) {
-        Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle("Success");
-        a.setContentText(msg);
-        a.showAndWait();
+    private void info(String m) {
+        new Alert(Alert.AlertType.INFORMATION, m).showAndWait();
     }
 
     public static void main(String[] args) {
