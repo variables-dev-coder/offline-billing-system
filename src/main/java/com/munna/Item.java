@@ -6,15 +6,15 @@ public class Item {
     private double price;
     private double amount;
 
-    public Item(String name, int quantity, double price) {
-        this.name = name;
-        this.quantity = quantity;
-        this.price = price;
-        this.amount = quantity * price;
+    public Item(String name,int quantity,double price){
+        this.name=name;
+        this.quantity=quantity;
+        this.price=price;
+        this.amount=quantity*price;
     }
 
-    public String getName() { return name; }
-    public int getQuantity() { return quantity; }
-    public double getPrice() { return price; }
-    public double getAmount() { return amount; }
+    public String getName(){return name;}
+    public int getQuantity(){return quantity;}
+    public double getPrice(){return price;}
+    public double getAmount(){return amount;}
 }
